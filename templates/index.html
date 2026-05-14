@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{username}}PC - 管理パネル</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .status-item { margin-bottom: 15px; }
+        .bar-container { background: #eee; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px; }
+        .bar-fill { background: #007bff; height: 100%; width: 0%; transition: width 0.5s ease-in-out; }
+        .input.error { border: 2px solid #dc3545; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <section class="hero">
+            <h1>{{username}}PCの管理パネル</h1>
+        </section>
+
+        <section class="grid">
+            <div class="card">
+                <h3>PCのステータス</h3>
+                
+                <div class="status-item">
+                    <p>CPU: <strong id="cpu-val">--</strong>%</p>
+                    <div class="bar-container"><div id="cpu-bar" class="bar-fill"></div></div>
+                </div>
+
+                <div class="status-item">
+                    <p>Memory: <strong id="mem-val">--</strong> / <span id="mem-total">--</span> GB</p>
+                    <div class="bar-container"><div id="mem-bar" class="bar-fill"></div></div>
+                </div>
+
+                <div class="status-item">
+                    <p>Disk (C:): <strong id="disk-val">--</strong> / <span id="disk-total">--</span> GB</p>
+                    <div class="bar-container"><div id="disk-bar" class="bar-fill"></div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>YouTube動画を再生</h3>
+                <div class="input-group">
+                    <input type="text" id="yturl" placeholder="https://www.youtube.com/watch?v=..." class="input" aria-label="YouTube URL">
+                    <button id="yt-btn" onclick="postYoutube()">再生</button>
+                </div>
+                <p id="yt-status" style="font-size: 0.8em; margin-top: 10px; color: #666;"></p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+
+                updateElement('cpu-val', data.cpu, 'cpu-bar', data.cpu);
+                updateElement('mem-val', data.memory.used, 'mem-bar', data.memory.percent);
+                document.getElementById('mem-total').innerText = data.memory.total;
+                updateElement('disk-val', data.disk.used, 'disk-bar', data.disk.percent);
+                document.getElementById('disk-total').innerText = data.disk.total;
+
+            } catch (error) {
+                console.error("ステータスの取得に失敗しました:", error);
+            }
+        }
+
+        function updateElement(textId, value, barId, percent) {
+            document.getElementById(textId).innerText = value;
+            document.getElementById(barId).style.width = `${percent}%`;
+        }
+
+        async function postYoutube() {
+            const input = document.getElementById("yturl");
+            const btn = document.getElementById("yt-btn");
+            const statusText = document.getElementById("yt-status");
+            const url = input.value.trim();
+
+            if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
+                alert("有効なYouTubeのURLを入力してください。");
+                input.classList.add("error");
+                return;
+            }
+            input.classList.remove("error");
+
+            try {
+                btn.disabled = true;
+                statusText.innerText = "リクエスト送信中...";
+
+                const response = await fetch('/api/youtube', {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "url": url })
+                });
+
+                if (response.ok) {
+                    alert("再生を開始しました！");
+                    input.value = ""; 
+                    statusText.innerText = "";
+                } else {
+                    throw new Error("サーバーエラーが発生しました。");
+                }
+            } catch (error) {
+                alert(error.message);
+                statusText.innerText = "エラーが発生しました。";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById("yturl").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") postYoutube();
+        });
+
+        updateStatus();
+        setInterval(updateStatus, 3000);
+    </script>
+</body>
+</html>

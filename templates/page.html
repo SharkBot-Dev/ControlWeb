@@ -1,0 +1,59 @@
+<html>
+    <head>
+        <title>Page</title>
+
+        <style>
+            body, html {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+            main {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                border: none;
+            }
+            .fullscreen-iframe {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                border: none;
+            }
+        </style>
+    </head>
+
+    <body>
+        <main id="main">
+            <h1>ここにページが表示されます。</h1>
+        </main>
+    </body>
+
+    <script>
+        let nowUrl = "";
+
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/page');
+                const data = await response.json();
+
+                if (!data.url) return;
+                if (nowUrl == data.url) return;
+                nowUrl = data.url;
+
+                document.getElementById('main').innerHTML = `<iframe class="fullscreen-iframe" src="${data.url}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+
+            } catch (error) {
+                console.error("ステータスの取得に失敗しました:", error);
+            }
+        }
+        updateStatus();
+        setInterval(updateStatus, 3000);
+    </script>
+</html>
